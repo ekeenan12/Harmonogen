@@ -3,7 +3,7 @@ import { DEFAULT_PARAMS, DEFAULT_ATTRACTOR, generateId, PRESETS, ATTRACTOR_PRESE
 import { HarmonographParams, AttractorParams, Oscillator, AppMode } from './types';
 import OscillatorControl from './components/OscillatorControl';
 import CanvasRenderer from './components/CanvasRenderer';
-import { generateConfig } from './services/geminiService';
+import { generateConfig } from './services/localGenerator';
 import { renderHarmonograph, renderAttractor } from './utils/renderCanvas';
 
 // Icons
