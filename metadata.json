@@ -1,0 +1,5 @@
+{
+  "name": "HarmonoGen AI",
+  "description": "A high-performance interactive Harmonograph visualizer. Generate complex geometric patterns using damped oscillators and rotating turntables, or describe a shape to let Gemini AI configure the physics for you.",
+  "requestFramePermissions": []
+}
