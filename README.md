@@ -2,11 +2,9 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Run the offline HarmonoGen app
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/drive/1DCgwxfr9ISZ6NcbHFCG9YTeM-5v25ZzG
+This app now uses a local, deterministic prompt generator (no external API keys required).
 
 ## Run Locally
 
@@ -15,6 +13,11 @@ View your app in AI Studio: https://ai.studio/apps/drive/1DCgwxfr9ISZ6NcbHFCG9YT
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
+
+## Offline prompt generator
+
+The "AI Dreamer" panel hashes your prompt into a seed and uses a local mapping of keywords
+(like "calm", "chaotic", "organic", "stormy", and "symmetric") to bias harmonograph and
+attractor parameters. This keeps generation fast, repeatable, and fully offline.
