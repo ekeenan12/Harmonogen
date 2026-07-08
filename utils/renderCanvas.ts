@@ -1,10 +1,13 @@
 import { HarmonographParams, AttractorParams } from '../types';
 
+// progress (0..1) draws only the first fraction of the trace, used by the
+// animation draw-on mode.
 export const renderHarmonograph = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  params: HarmonographParams
+  params: HarmonographParams,
+  progress: number = 1
 ) => {
   // Clear
   ctx.clearRect(0, 0, width, height);
@@ -31,7 +34,7 @@ export const renderHarmonograph = (
     opacity
   } = params;
 
-  const n = Math.floor(duration * sampleRate);
+  const n = Math.floor(duration * sampleRate * Math.max(0, Math.min(1, progress)));
   const timeStep = 1 / sampleRate;
   
   const centerX = width / 2;
