@@ -178,13 +178,16 @@ export const applyAttractorDrift = (
 ): AttractorParams => {
   if (amount <= 0) return params;
   const wander = makeWander(seed, time);
+  // Attractor coefficients are far more sensitive than harmonograph params:
+  // wander beyond ~±0.1 tends to leave the chaotic regime and collapse the
+  // orbit into a periodic cycle, so keep the range tight.
   return {
     ...params,
-    a: params.a + 0.3 * amount * wander(),
-    b: params.b + 0.3 * amount * wander(),
-    c: params.c + 0.3 * amount * wander(),
-    d: params.d + 0.3 * amount * wander(),
-    zoom: Math.max(0.05, params.zoom * (1 + 0.08 * amount * wander())),
+    a: params.a + 0.08 * amount * wander(),
+    b: params.b + 0.08 * amount * wander(),
+    c: params.c + 0.08 * amount * wander(),
+    d: params.d + 0.08 * amount * wander(),
+    zoom: Math.max(0.05, params.zoom * (1 + 0.05 * amount * wander())),
   };
 };
 
