@@ -50,6 +50,18 @@ export interface AnimationSettings {
   height: number;
   easing: EasingMode;
   drawOn: boolean; // harmonograph only: trace draws itself across the clip
+  drift: number; // 0..1: seeded slow oscillation layered on top of keyframes
+  driftSeed: number;
+}
+
+// Serialized project file for save/load.
+export interface ProjectFile {
+  app: 'harmonogen';
+  version: 1;
+  mode: AppMode;
+  settings: AnimationSettings;
+  harmonographKeyframes: AnimationKeyframe<HarmonographParams>[];
+  attractorKeyframes: AnimationKeyframe<AttractorParams>[];
 }
 
 export interface AIConfigResponse {

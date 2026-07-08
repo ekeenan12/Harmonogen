@@ -1,5 +1,6 @@
 import {
   AnimationKeyframe,
+  AnimationSettings,
   AttractorParams,
   EasingMode,
   HarmonographParams,
@@ -115,3 +116,96 @@ export const attractorAtTime = (
   time: number,
   easing: EasingMode,
 ): AttractorParams | null => paramsAtTime(keyframes, time, easing, lerpAttractor);
+
+// --- Drift -------------------------------------------------------------
+// Layers slow, seeded sinusoidal wander on top of the keyframed values so a
+// single keyframe becomes an endlessly evolving (but still deterministic)
+// loop. Each parameter slot gets its own frequency/phase drawn from the seed
+// in a fixed order, so the same seed always wanders the same way.
+
+const seededStream = (seed: number) => {
+  let t = (seed * 2654435761) >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const makeWander = (seed: number, time: number) => {
+  const rng = seededStream(seed);
+  // Each call consumes one (frequency, phase) pair from the stream and
+  // returns a value in [-1, 1] for this time.
+  return () => {
+    const freq = 0.02 + rng() * 0.06; // 12–50s period: slow, musical
+    const phase = rng() * Math.PI * 2;
+    return Math.sin(2 * Math.PI * freq * time + phase);
+  };
+};
+
+export const applyHarmonographDrift = (
+  params: HarmonographParams,
+  time: number,
+  seed: number,
+  amount: number,
+): HarmonographParams => {
+  if (amount <= 0) return params;
+  const wander = makeWander(seed, time);
+  // Draw the turntable's pair first so its wander stays continuous even if
+  // the interpolated oscillator count changes between keyframe segments.
+  const turntableOmega = params.turntableOmega + 0.04 * amount * wander();
+  const driftOsc = (osc: Oscillator): Oscillator => ({
+    ...osc,
+    amplitude: osc.amplitude * (1 + 0.15 * amount * wander()),
+    frequency: osc.frequency * (1 + 0.08 * amount * wander()),
+    phase: osc.phase + 0.8 * amount * wander(),
+    damping: Math.max(0, osc.damping * (1 + 0.3 * amount * wander())),
+  });
+  return {
+    ...params,
+    xOscillators: params.xOscillators.map(driftOsc),
+    yOscillators: params.yOscillators.map(driftOsc),
+    turntableOmega,
+  };
+};
+
+export const applyAttractorDrift = (
+  params: AttractorParams,
+  time: number,
+  seed: number,
+  amount: number,
+): AttractorParams => {
+  if (amount <= 0) return params;
+  const wander = makeWander(seed, time);
+  return {
+    ...params,
+    a: params.a + 0.3 * amount * wander(),
+    b: params.b + 0.3 * amount * wander(),
+    c: params.c + 0.3 * amount * wander(),
+    d: params.d + 0.3 * amount * wander(),
+    zoom: Math.max(0.05, params.zoom * (1 + 0.08 * amount * wander())),
+  };
+};
+
+// --- Frame helpers -------------------------------------------------------
+// The single entry points used by both the live preview and the exporter:
+// keyframe interpolation plus drift, as a pure function of time.
+
+export const harmonographFrame = (
+  keyframes: AnimationKeyframe<HarmonographParams>[],
+  time: number,
+  settings: Pick<AnimationSettings, 'easing' | 'drift' | 'driftSeed'>,
+): HarmonographParams | null => {
+  const p = harmonographAtTime(keyframes, time, settings.easing);
+  return p ? applyHarmonographDrift(p, time, settings.driftSeed, settings.drift) : null;
+};
+
+export const attractorFrame = (
+  keyframes: AnimationKeyframe<AttractorParams>[],
+  time: number,
+  settings: Pick<AnimationSettings, 'easing' | 'drift' | 'driftSeed'>,
+): AttractorParams | null => {
+  const p = attractorAtTime(keyframes, time, settings.easing);
+  return p ? applyAttractorDrift(p, time, settings.driftSeed, settings.drift) : null;
+};
