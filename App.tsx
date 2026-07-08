@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { DEFAULT_PARAMS, DEFAULT_ATTRACTOR, generateId, PRESETS, ATTRACTOR_PRESETS } from './constants';
-import { HarmonographParams, AttractorParams, Oscillator, AppMode, AnimationKeyframe, AnimationSettings } from './types';
+import { HarmonographParams, AttractorParams, Oscillator, AppMode, AnimationKeyframe, AnimationSettings, ProjectFile } from './types';
 import OscillatorControl from './components/OscillatorControl';
 import CanvasRenderer from './components/CanvasRenderer';
 import AnimationPanel from './components/AnimationPanel';
 import { generateConfig } from './services/localGenerator';
 import { renderHarmonograph, renderAttractor } from './utils/renderCanvas';
-import { harmonographAtTime, attractorAtTime } from './utils/animation';
+import { harmonographFrame, attractorFrame } from './utils/animation';
 
 // Icons
 const SparklesIcon = () => (
@@ -46,6 +46,8 @@ const DEFAULT_ANIMATION_SETTINGS: AnimationSettings = {
   height: 1080,
   easing: 'smooth',
   drawOn: false,
+  drift: 0,
+  driftSeed: 1,
 };
 
 const App: React.FC = () => {
@@ -147,13 +149,21 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLoadProject = (project: ProjectFile) => {
+    setAnimSettings({ ...DEFAULT_ANIMATION_SETTINGS, ...project.settings });
+    setHarmonographKeyframes(project.harmonographKeyframes ?? []);
+    setAttractorKeyframes(project.attractorKeyframes ?? []);
+    if (project.mode === 'harmonograph' || project.mode === 'fractal') setMode(project.mode);
+    setAnimTime(0);
+  };
+
   // When the Animate tab is open and keyframes exist, the canvas previews the
   // interpolated animation at the scrubber time instead of the editor params.
   let previewParams: HarmonographParams | AttractorParams = mode === 'harmonograph' ? params : attractorParams;
   let previewProgress = 1;
   if (activeTab === 'animate') {
     if (mode === 'harmonograph') {
-      const p = harmonographAtTime(harmonographKeyframes, animTime, animSettings.easing);
+      const p = harmonographFrame(harmonographKeyframes, animTime, animSettings);
       if (p) {
         previewParams = p;
         if (animSettings.drawOn && animSettings.duration > 0) {
@@ -161,7 +171,7 @@ const App: React.FC = () => {
         }
       }
     } else {
-      const p = attractorAtTime(attractorKeyframes, animTime, animSettings.easing);
+      const p = attractorFrame(attractorKeyframes, animTime, animSettings);
       if (p) previewParams = p;
     }
   }
@@ -290,6 +300,7 @@ const App: React.FC = () => {
                 setTime={setAnimTime}
                 onLoadHarmonograph={setParams}
                 onLoadAttractor={setAttractorParams}
+                onLoadProject={handleLoadProject}
               />
             )}
 

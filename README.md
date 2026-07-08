@@ -38,3 +38,18 @@ preview, so the same keyframes always produce the same clip — useful when
 regenerating assets for a video timeline. Encoding uses the browser's WebCodecs
 H.264 encoder (Chrome/Edge; falls back to VP9 if H.264 is unavailable).
 Resolution presets: 1080p, square, vertical, and 4K at 24/30/60 fps.
+
+### Drift
+
+The **Drift** slider layers slow, seeded sinusoidal wander on top of the
+keyframed values (oscillator amplitudes/frequencies/phases, turntable speed,
+attractor coefficients, zoom). A single keyframe plus drift becomes an
+endlessly evolving loop — and because the wander is derived from the seed,
+the same seed always produces the same motion. Hit **Reseed** to explore
+variations.
+
+### Projects
+
+**Save .json / Load .json** on the Animate tab captures keyframes, clip
+settings, and the drift seed — everything needed to regenerate the exact same
+clip later or hand a look to someone else.
