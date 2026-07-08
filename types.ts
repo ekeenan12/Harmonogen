@@ -34,6 +34,24 @@ export interface AttractorParams {
 
 export type AppMode = 'harmonograph' | 'fractal';
 
+// A snapshot of physics params pinned to a point in the animation clip.
+export interface AnimationKeyframe<T> {
+  id: string;
+  time: number; // seconds from clip start
+  params: T;
+}
+
+export type EasingMode = 'linear' | 'smooth';
+
+export interface AnimationSettings {
+  duration: number; // clip length in seconds
+  fps: number;
+  width: number;
+  height: number;
+  easing: EasingMode;
+  drawOn: boolean; // harmonograph only: trace draws itself across the clip
+}
+
 export interface AIConfigResponse {
   name: string;
   description: string;

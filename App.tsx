@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { DEFAULT_PARAMS, DEFAULT_ATTRACTOR, generateId, PRESETS, ATTRACTOR_PRESETS } from './constants';
-import { HarmonographParams, AttractorParams, Oscillator, AppMode } from './types';
+import { HarmonographParams, AttractorParams, Oscillator, AppMode, AnimationKeyframe, AnimationSettings } from './types';
 import OscillatorControl from './components/OscillatorControl';
 import CanvasRenderer from './components/CanvasRenderer';
+import AnimationPanel from './components/AnimationPanel';
 import { generateConfig } from './services/localGenerator';
 import { renderHarmonograph, renderAttractor } from './utils/renderCanvas';
+import { harmonographAtTime, attractorAtTime } from './utils/animation';
 
 // Icons
 const SparklesIcon = () => (
@@ -31,14 +33,35 @@ const DiceIcon = () => (
   </svg>
 );
 
+const FilmIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0118 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 016 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5" />
+  </svg>
+);
+
+const DEFAULT_ANIMATION_SETTINGS: AnimationSettings = {
+  duration: 20,
+  fps: 30,
+  width: 1920,
+  height: 1080,
+  easing: 'smooth',
+  drawOn: false,
+};
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>('harmonograph');
   const [params, setParams] = useState<HarmonographParams>(DEFAULT_PARAMS);
   const [attractorParams, setAttractorParams] = useState<AttractorParams>(DEFAULT_ATTRACTOR);
-  
+
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'settings' | 'ai'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'ai' | 'animate'>('settings');
+
+  // Animation state
+  const [animSettings, setAnimSettings] = useState<AnimationSettings>(DEFAULT_ANIMATION_SETTINGS);
+  const [harmonographKeyframes, setHarmonographKeyframes] = useState<AnimationKeyframe<HarmonographParams>[]>([]);
+  const [attractorKeyframes, setAttractorKeyframes] = useState<AnimationKeyframe<AttractorParams>[]>([]);
+  const [animTime, setAnimTime] = useState(0);
 
   // Oscillator Handlers
   const handleOscChange = useCallback((axis: 'X' | 'Y', updated: Oscillator) => {
@@ -124,6 +147,25 @@ const App: React.FC = () => {
     }
   };
 
+  // When the Animate tab is open and keyframes exist, the canvas previews the
+  // interpolated animation at the scrubber time instead of the editor params.
+  let previewParams: HarmonographParams | AttractorParams = mode === 'harmonograph' ? params : attractorParams;
+  let previewProgress = 1;
+  if (activeTab === 'animate') {
+    if (mode === 'harmonograph') {
+      const p = harmonographAtTime(harmonographKeyframes, animTime, animSettings.easing);
+      if (p) {
+        previewParams = p;
+        if (animSettings.drawOn && animSettings.duration > 0) {
+          previewProgress = Math.min(1, animTime / animSettings.duration);
+        }
+      }
+    } else {
+      const p = attractorAtTime(attractorKeyframes, animTime, animSettings.easing);
+      if (p) previewParams = p;
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-200 font-sans">
       
@@ -166,12 +208,19 @@ const App: React.FC = () => {
             >
               Controls
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('ai')}
               className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'ai' ? 'text-purple-400 border-b-2 border-purple-400 bg-slate-800/50' : 'text-slate-400 hover:text-slate-200'}`}
             >
               <SparklesIcon />
               AI Dreamer
+            </button>
+            <button
+              onClick={() => setActiveTab('animate')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'animate' ? 'text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              <FilmIcon />
+              Animate
             </button>
           </div>
 
@@ -224,6 +273,24 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+            )}
+
+            {activeTab === 'animate' && (
+              <AnimationPanel
+                mode={mode}
+                currentHarmonograph={params}
+                currentAttractor={attractorParams}
+                harmonographKeyframes={harmonographKeyframes}
+                setHarmonographKeyframes={setHarmonographKeyframes}
+                attractorKeyframes={attractorKeyframes}
+                setAttractorKeyframes={setAttractorKeyframes}
+                settings={animSettings}
+                setSettings={setAnimSettings}
+                time={animTime}
+                setTime={setAnimTime}
+                onLoadHarmonograph={setParams}
+                onLoadAttractor={setAttractorParams}
+              />
             )}
 
             {activeTab === 'settings' && mode === 'harmonograph' && (
@@ -381,7 +448,7 @@ const App: React.FC = () => {
 
         {/* Canvas Area */}
         <main className="flex-1 bg-black relative p-4 md:p-8 flex items-center justify-center overflow-hidden">
-          <CanvasRenderer mode={mode} params={mode === 'harmonograph' ? params : attractorParams} />
+          <CanvasRenderer mode={mode} params={previewParams} progress={previewProgress} />
         </main>
 
       </div>

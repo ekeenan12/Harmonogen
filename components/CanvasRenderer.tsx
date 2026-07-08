@@ -5,9 +5,10 @@ import { renderHarmonograph, renderAttractor } from '../utils/renderCanvas';
 interface CanvasRendererProps {
   mode: AppMode;
   params: HarmonographParams | AttractorParams;
+  progress?: number; // harmonograph draw-on fraction (0..1)
 }
 
-const CanvasRenderer: React.FC<CanvasRendererProps> = ({ mode, params }) => {
+const CanvasRenderer: React.FC<CanvasRendererProps> = ({ mode, params, progress = 1 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 800 });
@@ -45,14 +46,14 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({ mode, params }) => {
     // Use shared renderer
     requestAnimationFrame(() => {
       if (mode === 'harmonograph') {
-        renderHarmonograph(ctx, dimensions.width, dimensions.height, params as HarmonographParams);
+        renderHarmonograph(ctx, dimensions.width, dimensions.height, params as HarmonographParams, progress);
       } else {
         renderAttractor(ctx, dimensions.width, dimensions.height, params as AttractorParams);
       }
       setIsGenerating(false);
     });
 
-  }, [params, dimensions, mode]);
+  }, [params, dimensions, mode, progress]);
 
   return (
     <div ref={containerRef} className="w-full h-full relative rounded-xl overflow-hidden shadow-2xl shadow-black/50 border border-slate-800">
