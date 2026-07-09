@@ -1,14 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { HarmonographParams, AttractorParams, AppMode } from '../types';
-import { renderHarmonograph, renderAttractor } from '../utils/renderCanvas';
+import { GeneratorDef } from '../generators';
 
 interface CanvasRendererProps {
-  mode: AppMode;
-  params: HarmonographParams | AttractorParams;
-  progress?: number; // harmonograph draw-on fraction (0..1)
+  def: GeneratorDef;
+  params: any;
+  progress?: number; // draw-on fraction (0..1) for generators that support it
 }
 
-const CanvasRenderer: React.FC<CanvasRendererProps> = ({ mode, params, progress = 1 }) => {
+const CanvasRenderer: React.FC<CanvasRendererProps> = ({ def, params, progress = 1 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 800 });
@@ -43,22 +42,17 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({ mode, params, progress 
 
     setIsGenerating(true);
 
-    // Use shared renderer
     requestAnimationFrame(() => {
-      if (mode === 'harmonograph') {
-        renderHarmonograph(ctx, dimensions.width, dimensions.height, params as HarmonographParams, progress);
-      } else {
-        renderAttractor(ctx, dimensions.width, dimensions.height, params as AttractorParams);
-      }
+      def.render(ctx, dimensions.width, dimensions.height, params, progress);
       setIsGenerating(false);
     });
 
-  }, [params, dimensions, mode, progress]);
+  }, [def, params, dimensions, progress]);
 
   return (
     <div ref={containerRef} className="w-full h-full relative rounded-xl overflow-hidden shadow-2xl shadow-black/50 border border-slate-800">
-      <canvas 
-        ref={canvasRef} 
+      <canvas
+        ref={canvasRef}
         className="block"
       />
       {isGenerating && (
@@ -66,12 +60,11 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({ mode, params, progress 
           RENDERING...
         </div>
       )}
-      <div className="absolute bottom-4 right-4 pointer-events-none text-[10px] text-slate-500 font-mono opacity-50">
-        {mode === 'harmonograph' 
-          ? `${((params as HarmonographParams).duration * (params as HarmonographParams).sampleRate).toLocaleString()} pts`
-          : `${(params as AttractorParams).iterations.toLocaleString()} pts`
-        }
-      </div>
+      {def.stat && (
+        <div className="absolute bottom-4 right-4 pointer-events-none text-[10px] text-slate-500 font-mono opacity-50">
+          {def.stat(params)}
+        </div>
+      )}
     </div>
   );
 };

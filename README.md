@@ -4,6 +4,31 @@
 
 This app now uses a local, deterministic prompt generator (no external API keys required).
 
+## Generators
+
+Six deterministic generators, switchable in the header. Each has presets,
+schema-driven controls, keyframe morphing, drift, draw-on (where noted), HD
+still export, and mp4 animation export:
+
+- **Harmonograph** — damped X/Y oscillator sums with a rotating turntable (draw-on)
+- **Attractor** — Clifford / De Jong chaotic maps with chaos-safe morphing (see below)
+- **Lissajous** — parametric curve family with radial modulation and rotation (draw-on)
+- **Crystal** — N-fold symmetric recursive branching lattices, seeded jitter, growth (draw-on)
+- **Waves** — ridgeline wave stacks or string-art parabola envelopes (draw-on)
+- **Helix** — 3D helix strands projected with tilt/perspective, twist and taper (draw-on)
+
+New generators are one module each in `generators/` implementing render, lerp,
+drift, presets, and a control schema.
+
+### Chaos-safe attractor morphs
+
+A straight line between two attractor coefficient sets often passes through
+regions where the orbit collapses to a periodic cycle (a near-empty frame).
+Keyframe morphs probe orbit density along the path; dead stretches first try a
+deterministic detour arc through coefficient space and otherwise crossfade the
+two endpoint point clouds. Morphs between different models (Clifford ↔ De
+Jong) always crossfade.
+
 ## Run Locally
 
 **Prerequisites:**  Node.js
