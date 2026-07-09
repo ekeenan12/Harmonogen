@@ -1,15 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { generateId } from '../constants';
+import { generateId } from '../utils/id';
 import {
   AnimationKeyframe,
   AnimationSettings,
-  AppMode,
-  AttractorParams,
-  HarmonographParams,
+  GeneratorId,
   ProjectFile,
 } from '../types';
-import { attractorFrame, harmonographFrame } from '../utils/animation';
-import { renderAttractor, renderHarmonograph } from '../utils/renderCanvas';
+import { GeneratorDef, generatorFrame } from '../generators';
 import { downloadBlob, exportMp4, isVideoExportSupported } from '../utils/exportVideo';
 
 const RESOLUTIONS: { label: string; width: number; height: number }[] = [
@@ -20,36 +17,31 @@ const RESOLUTIONS: { label: string; width: number; height: number }[] = [
 ];
 
 interface AnimationPanelProps {
-  mode: AppMode;
-  currentHarmonograph: HarmonographParams;
-  currentAttractor: AttractorParams;
-  harmonographKeyframes: AnimationKeyframe<HarmonographParams>[];
-  setHarmonographKeyframes: React.Dispatch<React.SetStateAction<AnimationKeyframe<HarmonographParams>[]>>;
-  attractorKeyframes: AnimationKeyframe<AttractorParams>[];
-  setAttractorKeyframes: React.Dispatch<React.SetStateAction<AnimationKeyframe<AttractorParams>[]>>;
+  def: GeneratorDef;
+  currentParams: any;
+  keyframes: AnimationKeyframe<any>[];
+  setKeyframes: (updater: (prev: AnimationKeyframe<any>[]) => AnimationKeyframe<any>[]) => void;
+  // Full keyframe record across generators, for project save.
+  allKeyframes: Partial<Record<GeneratorId, AnimationKeyframe<any>[]>>;
   settings: AnimationSettings;
   setSettings: React.Dispatch<React.SetStateAction<AnimationSettings>>;
   time: number;
   setTime: (t: number) => void;
-  onLoadHarmonograph: (params: HarmonographParams) => void;
-  onLoadAttractor: (params: AttractorParams) => void;
+  onLoadParams: (params: any) => void;
   onLoadProject: (project: ProjectFile) => void;
 }
 
 const AnimationPanel: React.FC<AnimationPanelProps> = ({
-  mode,
-  currentHarmonograph,
-  currentAttractor,
-  harmonographKeyframes,
-  setHarmonographKeyframes,
-  attractorKeyframes,
-  setAttractorKeyframes,
+  def,
+  currentParams,
+  keyframes,
+  setKeyframes,
+  allKeyframes,
   settings,
   setSettings,
   time,
   setTime,
-  onLoadHarmonograph,
-  onLoadAttractor,
+  onLoadParams,
   onLoadProject,
 }) => {
   const [playing, setPlaying] = useState(false);
@@ -58,8 +50,7 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
   const timeRef = useRef(time);
   timeRef.current = time;
 
-  const isHarmonograph = mode === 'harmonograph';
-  const keyframeCount = isHarmonograph ? harmonographKeyframes.length : attractorKeyframes.length;
+  const keyframeCount = keyframes.length;
 
   // Playback loop for the preview scrubber.
   useEffect(() => {
@@ -79,56 +70,30 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
 
   const addKeyframe = () => {
     const t = Math.min(time, settings.duration);
-    if (isHarmonograph) {
-      setHarmonographKeyframes((prev) => [
-        ...prev,
-        { id: generateId(), time: t, params: structuredClone(currentHarmonograph) },
-      ]);
-    } else {
-      setAttractorKeyframes((prev) => [
-        ...prev,
-        { id: generateId(), time: t, params: structuredClone(currentAttractor) },
-      ]);
-    }
+    setKeyframes((prev) => [
+      ...prev,
+      { id: generateId(), time: t, params: structuredClone(currentParams) },
+    ]);
   };
 
   const updateKeyframeTime = (id: string, t: number) => {
     if (Number.isNaN(t)) return;
-    if (isHarmonograph) {
-      setHarmonographKeyframes((prev) => prev.map((k) => (k.id === id ? { ...k, time: t } : k)));
-    } else {
-      setAttractorKeyframes((prev) => prev.map((k) => (k.id === id ? { ...k, time: t } : k)));
-    }
+    setKeyframes((prev) => prev.map((k) => (k.id === id ? { ...k, time: t } : k)));
   };
 
   const overwriteKeyframe = (id: string) => {
-    if (isHarmonograph) {
-      setHarmonographKeyframes((prev) =>
-        prev.map((k) => (k.id === id ? { ...k, params: structuredClone(currentHarmonograph) } : k)),
-      );
-    } else {
-      setAttractorKeyframes((prev) =>
-        prev.map((k) => (k.id === id ? { ...k, params: structuredClone(currentAttractor) } : k)),
-      );
-    }
+    setKeyframes((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, params: structuredClone(currentParams) } : k)),
+    );
   };
 
   const loadKeyframe = (id: string) => {
-    if (isHarmonograph) {
-      const kf = harmonographKeyframes.find((k) => k.id === id);
-      if (kf) onLoadHarmonograph(structuredClone(kf.params));
-    } else {
-      const kf = attractorKeyframes.find((k) => k.id === id);
-      if (kf) onLoadAttractor(structuredClone(kf.params));
-    }
+    const kf = keyframes.find((k) => k.id === id);
+    if (kf) onLoadParams(structuredClone(kf.params));
   };
 
   const removeKeyframe = (id: string) => {
-    if (isHarmonograph) {
-      setHarmonographKeyframes((prev) => prev.filter((k) => k.id !== id));
-    } else {
-      setAttractorKeyframes((prev) => prev.filter((k) => k.id !== id));
-    }
+    setKeyframes((prev) => prev.filter((k) => k.id !== id));
   };
 
   const handleExport = async () => {
@@ -146,24 +111,20 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
     try {
       const { width, height, fps, duration, drawOn } = settings;
       const totalFrames = Math.max(1, Math.round(duration * fps));
+      const useDrawOn = drawOn && def.supportsDrawOn;
       const { blob, codec } = await exportMp4({
         width,
         height,
         fps,
         duration,
         renderFrame: (ctx, w, h, t) => {
-          if (isHarmonograph) {
-            const p = harmonographFrame(harmonographKeyframes, t, settings)!;
-            const progress = drawOn ? Math.min(1, (t * fps + 1) / totalFrames) : 1;
-            renderHarmonograph(ctx, w, h, p, progress);
-          } else {
-            const p = attractorFrame(attractorKeyframes, t, settings)!;
-            renderAttractor(ctx, w, h, p);
-          }
+          const p = generatorFrame(def, keyframes, t, settings)!;
+          const progress = useDrawOn ? Math.min(1, (t * fps + 1) / totalFrames) : 1;
+          def.render(ctx, w, h, p, progress);
         },
         onProgress: setExportProgress,
       });
-      downloadBlob(blob, `${mode}-animation-${codec}-${Date.now()}.mp4`);
+      downloadBlob(blob, `${def.id}-animation-${codec}-${Date.now()}.mp4`);
       if (codec !== 'h264') {
         alert(
           'Heads up: this browser has no H.264 encoder, so the clip was encoded as VP9 in mp4. ' +
@@ -180,11 +141,10 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
   const saveProject = () => {
     const project: ProjectFile = {
       app: 'harmonogen',
-      version: 1,
-      mode,
+      version: 2,
+      generator: def.id,
       settings,
-      harmonographKeyframes,
-      attractorKeyframes,
+      keyframes: allKeyframes,
     };
     downloadBlob(
       new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }),
@@ -196,8 +156,8 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(String(reader.result)) as ProjectFile;
-        if (parsed?.app !== 'harmonogen' || !parsed.settings || !Array.isArray(parsed.harmonographKeyframes)) {
+        const parsed = JSON.parse(String(reader.result));
+        if (parsed?.app !== 'harmonogen' || !parsed.settings) {
           throw new Error('Not a HarmonoGen project file.');
         }
         setPlaying(false);
@@ -209,9 +169,7 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
     reader.readAsText(file);
   };
 
-  const keyframeRows = (isHarmonograph ? harmonographKeyframes : attractorKeyframes)
-    .slice()
-    .sort((a, b) => a.time - b.time);
+  const keyframeRows = keyframes.slice().sort((a, b) => a.time - b.time);
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -277,7 +235,7 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
             ))}
           </div>
         </div>
-        {isHarmonograph && (
+        {def.supportsDrawOn && (
           <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
             <input
               type="checkbox"
@@ -285,7 +243,7 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
               onChange={(e) => setSettings((prev) => ({ ...prev, drawOn: e.target.checked }))}
               className="accent-emerald-500"
             />
-            Draw-on (trace draws itself over the clip)
+            Draw-on (figure draws itself over the clip)
           </label>
         )}
         <div>
@@ -461,8 +419,8 @@ const AnimationPanel: React.FC<AnimationPanelProps> = ({
           </label>
         </div>
         <p className="text-[10px] text-slate-500">
-          Keyframes, clip settings, and drift seed — everything needed to regenerate the exact same
-          clip later.
+          Keyframes (all generators), clip settings, and drift seed — everything needed to
+          regenerate the exact same clip later.
         </p>
       </div>
     </div>
