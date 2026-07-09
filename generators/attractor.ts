@@ -13,6 +13,9 @@ export const DEFAULT_ATTRACTOR: AttractorParams = {
   color: '#f472b6', // Pink-400
   opacity: 0.3,
   zoom: 1.0,
+  rotation: 0,
+  spinRate: 0,
+  colorCycle: 0,
 };
 
 export const ATTRACTOR_PRESETS: Record<string, AttractorParams> = {
@@ -200,6 +203,9 @@ const lerpVisuals = (a: AttractorParams, b: AttractorParams, u: number): Attract
   color: lerpHexColor(a.color, b.color, u),
   opacity: lerp(a.opacity, b.opacity, u),
   zoom: lerp(a.zoom, b.zoom, u),
+  rotation: lerp(a.rotation ?? 0, b.rotation ?? 0, u),
+  spinRate: lerp(a.spinRate ?? 0, b.spinRate ?? 0, u),
+  colorCycle: lerp(a.colorCycle ?? 0, b.colorCycle ?? 0, u),
 });
 
 const lerpAttractor = (a: AttractorParams, b: AttractorParams, u: number): AttractorParams => {
@@ -263,6 +269,9 @@ const renderPoints = (
   const centerX = width / 2;
   const centerY = height / 2;
   const scale = (Math.min(width, height) / 5) * zoom;
+  const rotation = params.rotation ?? 0;
+  const cosR = Math.cos(rotation);
+  const sinR = Math.sin(rotation);
 
   // Skip first few points to settle orbit
   for (let i = 0; i < 20; i++) {
@@ -271,7 +280,9 @@ const renderPoints = (
 
   for (let i = 0; i < iterations; i++) {
     [x, y] = stepOrbit(model, [a, b, c, d], x, y);
-    ctx.fillRect(centerX + x * scale, centerY + y * scale, 1, 1);
+    const xr = x * cosR - y * sinR;
+    const yr = x * sinR + y * cosR;
+    ctx.fillRect(centerX + xr * scale, centerY + yr * scale, 1, 1);
   }
   ctx.globalAlpha = 1;
 };
@@ -345,8 +356,15 @@ export const attractorGenerator: GeneratorDef<AttractorParams> = {
     { kind: 'slider', key: 'd', label: 'd', min: -3, max: 3, step: 0.01, decimals: 2 },
     { kind: 'int', key: 'iterations', label: 'Iterations', min: 10000, max: 500000, step: 1000 },
     { kind: 'number', key: 'zoom', label: 'Zoom', step: 0.1, min: 0.1 },
+    { kind: 'slider', key: 'rotation', label: 'Rotation', min: 0, max: Math.PI * 2, step: 0.01, decimals: 2 },
+    { kind: 'slider', key: 'spinRate', label: 'Spin Rate (rev/s)', min: -0.25, max: 0.25, step: 0.005, decimals: 3 },
+    { kind: 'slider', key: 'colorCycle', label: 'Color Cycle (hue/s)', min: 0, max: 0.5, step: 0.01, decimals: 2 },
     { kind: 'color', key: 'color', label: 'Color' },
     { kind: 'slider', key: 'opacity', label: 'Opacity', min: 0.01, max: 1, step: 0.01, decimals: 2 },
+  ],
+  rates: [
+    { rateKey: 'spinRate', targetKey: 'rotation', kind: 'add' },
+    { rateKey: 'colorCycle', targetKey: 'color', kind: 'hue' },
   ],
   randomize: (p) => {
     const r = () => parseFloat((Math.random() * 5 - 2.5).toFixed(2));

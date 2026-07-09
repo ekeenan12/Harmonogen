@@ -79,6 +79,85 @@ export const paramsAtTime = <T>(
   return last.params;
 };
 
+// Integrates a keyframed scalar (a *rate* param) from t=0 to `time`,
+// honoring the same per-segment easing as paramsAtTime. Closed-form per
+// segment, so it's exact and O(#keyframes): with v(u) = v0 + (v1-v0)·e(u),
+// ∫e = u²/2 (linear) or u³ - u⁴/2 (smoothstep). This is what turns rate
+// params (spin rate, flow speed, color cycle) into continuous phase without
+// jumps when the rate itself is keyframed.
+export const integrateKeyframedScalar = <T>(
+  keyframes: AnimationKeyframe<T>[],
+  getValue: (params: T) => number,
+  time: number,
+  easing: EasingMode,
+): number => {
+  if (keyframes.length === 0 || time <= 0) return 0;
+  const sorted = [...keyframes].sort((a, b) => a.time - b.time);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  let acc = getValue(first.params) * Math.min(time, Math.max(0, first.time));
+  if (time <= first.time) return acc;
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const k0 = sorted[i];
+    const k1 = sorted[i + 1];
+    const span = k1.time - k0.time;
+    if (span <= 0 || time <= k0.time) continue;
+    const s = Math.min(1, (time - k0.time) / span);
+    const v0 = getValue(k0.params);
+    const v1 = getValue(k1.params);
+    const easeIntegral = easing === 'smooth' ? s * s * s - (s * s * s * s) / 2 : (s * s) / 2;
+    acc += span * (v0 * s + (v1 - v0) * easeIntegral);
+  }
+  if (time > last.time) acc += getValue(last.params) * (time - last.time);
+  return acc;
+};
+
+// Rotate a hex color's hue by `degrees`, preserving saturation/lightness.
+export const hueRotateHex = (hex: string, degrees: number): string => {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  h = (((h + degrees / 360) % 1) + 1) % 1;
+  const hueToRgb = (p: number, q: number, t: number) => {
+    let tt = ((t % 1) + 1) % 1;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  let rr: number;
+  let gg: number;
+  let bb: number;
+  if (s === 0) {
+    rr = gg = bb = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    rr = hueToRgb(p, q, h + 1 / 3);
+    gg = hueToRgb(p, q, h);
+    bb = hueToRgb(p, q, h - 1 / 3);
+  }
+  return (
+    '#' +
+    [rr, gg, bb]
+      .map((v) => Math.round(v * 255).toString(16).padStart(2, '0'))
+      .join('')
+  );
+};
+
 // Builds a lerp for flat param objects: numbers interpolate, listed color
 // keys blend in RGB, listed int keys round, listed step keys switch at the
 // segment midpoint, and everything else carries over from `a`.

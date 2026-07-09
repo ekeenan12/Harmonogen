@@ -169,17 +169,29 @@ const App: React.FC = () => {
 
   const handleLoadProject = (raw: ProjectFile | ProjectFileV1) => {
     setAnimSettings({ ...DEFAULT_ANIMATION_SETTINGS, ...raw.settings });
+    // Backfill params saved before newer fields existed with the generator's
+    // defaults — except motion rates, which backfill as 0 so a project saved
+    // before rates existed keeps rendering exactly as it did (defaults may
+    // ship with nonzero motion for freshly-created params).
+    const normalize = (id: GeneratorId, kfs: AnimationKeyframe<any>[]) => {
+      const def = GENERATORS[id];
+      const zeroRates: Record<string, number> = {};
+      for (const r of def.rates ?? []) zeroRates[r.rateKey] = 0;
+      return kfs.map((kf) => ({ ...kf, params: { ...def.defaults, ...zeroRates, ...kf.params } }));
+    };
     if (raw.version === 2) {
       const known = Object.fromEntries(
-        Object.entries(raw.keyframes ?? {}).filter(([id]) => id in GENERATORS),
+        Object.entries(raw.keyframes ?? {})
+          .filter(([id]) => id in GENERATORS)
+          .map(([id, kfs]) => [id, normalize(id as GeneratorId, (kfs as AnimationKeyframe<any>[]) ?? [])]),
       ) as Partial<Record<GeneratorId, AnimationKeyframe<any>[]>>;
       setAllKeyframes(known);
       if (raw.generator in GENERATORS) setGeneratorId(raw.generator);
     } else {
       // v1: two fixed keyframe lists and mode 'fractal' for the attractor.
       setAllKeyframes({
-        harmonograph: raw.harmonographKeyframes ?? [],
-        attractor: raw.attractorKeyframes ?? [],
+        harmonograph: normalize('harmonograph', raw.harmonographKeyframes ?? []),
+        attractor: normalize('attractor', raw.attractorKeyframes ?? []),
       });
       setGeneratorId(raw.mode === 'fractal' ? 'attractor' : 'harmonograph');
     }
@@ -353,6 +365,13 @@ const App: React.FC = () => {
                         <label className="text-[10px] text-slate-400">Line Width</label>
                         <input type="range" min="0.1" max="3" step="0.1" value={hParams.lineWidth} onChange={(e) => setHParams({...hParams, lineWidth: parseFloat(e.target.value)})} className="w-full accent-cyan-500 h-1 bg-slate-700 rounded mt-3" />
                       </div>
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-xs mb-1">
+                       <span className="text-slate-400">Color Cycle (hue/s)</span>
+                       <span className="text-slate-300 font-mono">{(hParams.colorCycle ?? 0).toFixed(2)}</span>
+                     </div>
+                     <input type="range" min="0" max="0.5" step="0.01" value={hParams.colorCycle ?? 0} onChange={(e) => setHParams({...hParams, colorCycle: parseFloat(e.target.value)})} className="w-full accent-cyan-500 h-1 bg-slate-700 rounded appearance-none" />
                    </div>
 
                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800">

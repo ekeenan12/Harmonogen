@@ -16,6 +16,7 @@ export interface HarmonographParams {
   yOscillators: Oscillator[];
   turntableOmega: number; // Hz (converted to rad/s internally)
   turntableDamping: number;
+  colorCycle: number; // hue rotations per second (integrated over the clip)
 }
 
 export type AttractorType = 'clifford' | 'dejong';
@@ -30,6 +31,9 @@ export interface AttractorParams {
   color: string;
   opacity: number;
   zoom: number;
+  rotation: number; // radians, static orientation
+  spinRate: number; // revolutions per second (integrated)
+  colorCycle: number; // hue rotations per second (integrated)
   // Set by the chaos-safe morph when a keyframe segment passes through a
   // collapsed region: render this set fading out and blendWith fading in.
   blendWith?: { params: AttractorParams; mix: number };
@@ -44,6 +48,9 @@ export interface LissajousParams {
   rotation: number; // radians
   turns: number; // parameter range in 2*PI units
   points: number;
+  spinRate: number; // revolutions per second (integrated into rotation)
+  phaseRate: number; // phase cycles per second (integrated into phase)
+  colorCycle: number; // hue rotations per second (integrated)
   lineColor: string;
   lineWidth: number;
   opacity: number;
@@ -58,6 +65,13 @@ export interface CrystalParams {
   jitter: number; // seeded per-branch angle variation
   seed: number; // structure seed (separate from drift seed)
   growth: number; // 0..1 how much of the lattice has grown
+  rotation: number; // radians, static orientation
+  tumble: number; // radians, coin-flip foreshortening angle
+  offsetX: number; // horizontal offset in scene units
+  offsetY: number; // vertical offset in scene units
+  spinRate: number; // revolutions per second (integrated into rotation)
+  tumbleRate: number; // flips per second (integrated into tumble)
+  colorCycle: number; // hue rotations per second (integrated)
   lineColor: string;
   lineWidth: number;
   opacity: number;
@@ -74,6 +88,8 @@ export interface WavesParams {
   spacing: number; // vertical distance between rows
   falloff: number; // 0..1 amplitude/opacity falloff toward the back rows
   style: WavesStyle;
+  flowSpeed: number; // wave cycles per second (integrated into phase)
+  colorCycle: number; // hue rotations per second (integrated)
   lineColor: string;
   lineWidth: number;
   opacity: number;
@@ -89,6 +105,8 @@ export interface HelixParams {
   taper: number; // 0..1 radius reduction along length
   perspective: number; // projection strength
   points: number;
+  twistRate: number; // revolutions per second (integrated into twist)
+  colorCycle: number; // hue rotations per second (integrated)
   lineColor: string;
   lineWidth: number;
   opacity: number;

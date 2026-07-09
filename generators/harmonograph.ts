@@ -19,6 +19,7 @@ export const DEFAULT_PARAMS: HarmonographParams = {
   ],
   turntableOmega: 0.0,
   turntableDamping: 0.0,
+  colorCycle: 0,
 };
 
 export const PRESETS: Record<string, HarmonographParams> = {
@@ -161,6 +162,7 @@ const lerpHarmonograph = (
   yOscillators: lerpOscillators(a.yOscillators, b.yOscillators, u),
   turntableOmega: lerp(a.turntableOmega, b.turntableOmega, u),
   turntableDamping: lerp(a.turntableDamping, b.turntableDamping, u),
+  colorCycle: lerp(a.colorCycle ?? 0, b.colorCycle ?? 0, u),
 });
 
 const driftHarmonograph = (
@@ -198,6 +200,7 @@ export const harmonographGenerator: GeneratorDef<HarmonographParams> = {
   lerp: lerpHarmonograph,
   drift: driftHarmonograph,
   controls: 'custom', // dynamic oscillator lists need the bespoke panel
+  rates: [{ rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' }],
   supportsDrawOn: true,
   stat: (p) => `${(p.duration * p.sampleRate).toLocaleString()} pts`,
 };
