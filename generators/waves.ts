@@ -169,6 +169,31 @@ export const wavesGenerator: GeneratorDef<WavesParams> = {
     { rateKey: 'flowSpeed', targetKey: 'phase', kind: 'add' },
     { rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' },
   ],
+  dream: {
+    colorKey: 'lineColor',
+    hint: 'E.g., calm ocean swell flowing under a golden sky...',
+    base: {
+      ranges: {
+        rows: [16, 44], amplitude: [0.2, 0.6], wavelength: [0.6, 2.4],
+        curvature: [-0.5, 0.5], spacing: [0.04, 0.09], falloff: [0.3, 0.7],
+        flowSpeed: [0.06, 0.2],
+        lineWidth: [0.5, 1.3], opacity: [0.5, 0.9],
+      },
+    },
+    keywords: {
+      parabola: { set: { style: 'stitch' }, ranges: { rows: [30, 64] } },
+      parabolic: { set: { style: 'stitch' }, ranges: { rows: [30, 64] } },
+      strings: { set: { style: 'stitch' }, ranges: { rows: [30, 64] } },
+      stitched: { set: { style: 'stitch' }, ranges: { rows: [30, 64] } },
+      swell: { ranges: { wavelength: [1.8, 3.2], amplitude: [0.4, 0.8] } },
+      choppy: { ranges: { wavelength: [0.3, 0.7] } },
+      interference: { ranges: { rows: [36, 60], wavelength: [0.4, 0.8] } },
+      cathedral: { set: { style: 'stitch' }, ranges: { curvature: [-0.6, -0.2], rows: [48, 72] } },
+    },
+    ints: ['rows'],
+    densityKeys: ['rows'],
+    growKeys: ['amplitude'],
+  },
   supportsDrawOn: true,
   stat: (p) => (p.style === 'stitch' ? `${Math.round(p.rows) * 8} chords` : `${Math.round(p.rows)} rows`),
 };

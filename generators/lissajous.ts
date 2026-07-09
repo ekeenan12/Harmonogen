@@ -109,6 +109,30 @@ export const lissajousGenerator: GeneratorDef<LissajousParams> = {
     { rateKey: 'phaseRate', targetKey: 'phase', kind: 'add' },
     { rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' },
   ],
+  dream: {
+    colorKey: 'lineColor',
+    hint: 'E.g., a hypnotic neon knot slowly spinning...',
+    base: {
+      ranges: {
+        freqX: [2, 7], freqY: [2, 7], phase: [0, Math.PI * 2],
+        turns: [1, 4], points: [4000, 14000],
+        phaseRate: [0.02, 0.08],
+        lineWidth: [0.6, 1.6], opacity: [0.5, 0.9],
+      },
+    },
+    keywords: {
+      knot: { ranges: { freqX: [5, 9], freqY: [4, 8] } },
+      knotted: { ranges: { freqX: [5, 9], freqY: [4, 8] } },
+      rose: { ranges: { modFreq: [5, 9], modDepth: [0.3, 0.6], turns: [6, 12] } },
+      rosette: { ranges: { modFreq: [5, 9], modDepth: [0.3, 0.6], turns: [6, 12] } },
+      precessing: { ranges: { phaseRate: [0.05, 0.15], turns: [12, 30], points: [14000, 24000] } },
+      weave: { ranges: { modFreq: [1.5, 3], modDepth: [0.15, 0.3], turns: [3, 6] } },
+      woven: { ranges: { modFreq: [1.5, 3], modDepth: [0.15, 0.3], turns: [3, 6] } },
+    },
+    ints: ['freqX', 'freqY', 'turns', 'points'],
+    densityKeys: ['points', 'turns'],
+    growKeys: ['turns'],
+  },
   supportsDrawOn: true,
   stat: (p) => `${p.points.toLocaleString()} pts`,
 };

@@ -121,6 +121,29 @@ export const helixGenerator: GeneratorDef<HelixParams> = {
     { rateKey: 'twistRate', targetKey: 'twist', kind: 'add' },
     { rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' },
   ],
+  dream: {
+    colorKey: 'lineColor',
+    hint: 'E.g., a neon dna strand twisting upward...',
+    base: {
+      ranges: {
+        strands: [1, 6], radius: [0.4, 0.9], pitch: [1.0, 2.4], turns: [3, 12],
+        tilt: [0.1, 0.6], taper: [0, 0.4], perspective: [0.2, 0.6],
+        twistRate: [0.04, 0.12], points: [2000, 6000],
+        lineWidth: [0.6, 1.8], opacity: [0.5, 0.9],
+      },
+    },
+    keywords: {
+      dna: { set: { strands: 2 }, ranges: { pitch: [1.6, 2.2], turns: [5, 9] } },
+      tornado: { ranges: { taper: [0.7, 0.95], strands: [4, 7] } },
+      vortex: { ranges: { taper: [0.7, 0.95], strands: [4, 7] } },
+      tight: { ranges: { turns: [12, 24] } },
+      coiled: { ranges: { turns: [12, 24] } },
+      ribbon: { ranges: { strands: [6, 10], lineWidth: [0.5, 0.9] } },
+    },
+    ints: ['strands', 'turns', 'points'],
+    densityKeys: ['strands', 'turns'],
+    growKeys: ['turns'],
+  },
   supportsDrawOn: true,
   stat: (p) => `${p.points.toLocaleString()} pts`,
 };

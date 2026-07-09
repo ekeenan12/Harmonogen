@@ -160,9 +160,3 @@ export interface ProjectFile {
   settings: AnimationSettings;
   keyframes: Partial<Record<GeneratorId, AnimationKeyframe<unknown>[]>>;
 }
-
-export interface AIConfigResponse {
-  name: string;
-  description: string;
-  params: Partial<HarmonographParams> | Partial<AttractorParams>;
-}
