@@ -12,6 +12,13 @@ const DEFAULTS: CrystalParams = {
   jitter: 0,
   seed: 1,
   growth: 1,
+  rotation: 0,
+  tumble: 0,
+  offsetX: 0,
+  offsetY: 0,
+  spinRate: 0,
+  tumbleRate: 0,
+  colorCycle: 0,
   lineColor: '#a5f3fc',
   lineWidth: 1.0,
   opacity: 0.75,
@@ -69,10 +76,14 @@ const render = (
 
   const segments = buildArm(p);
   const symmetry = Math.max(1, Math.round(p.symmetry));
-  const centerX = width / 2;
-  const centerY = height / 2;
   const scale = Math.min(width, height) / 2.4;
+  const centerX = width / 2 + (p.offsetX ?? 0) * scale;
+  const centerY = height / 2 + (p.offsetY ?? 0) * scale;
   const maxDepth = Math.max(1, Math.round(p.depth));
+  const baseRotation = p.rotation ?? 0;
+  // Coin-flip foreshortening: cos(tumble) squashes the figure along screen X,
+  // which reads as the lattice tumbling in 3D. Negative just mirrors it.
+  const tumbleScale = Math.cos(p.tumble ?? 0);
 
   ctx.strokeStyle = p.lineColor;
   ctx.lineWidth = p.lineWidth;
@@ -80,7 +91,7 @@ const render = (
   ctx.beginPath();
 
   for (let k = 0; k < symmetry; k += 1) {
-    const rot = (k / symmetry) * Math.PI * 2;
+    const rot = (k / symmetry) * Math.PI * 2 + baseRotation;
     const cosR = Math.cos(rot);
     const sinR = Math.sin(rot);
     for (const mirror of [1, -1]) {
@@ -92,9 +103,9 @@ const render = (
         const mx0 = seg.x0 * mirror;
         const mx1 = seg.x0 * mirror + (seg.x1 - seg.x0) * mirror * local;
         const my1 = seg.y0 + (seg.y1 - seg.y0) * local;
-        const x0 = mx0 * cosR - seg.y0 * sinR;
+        const x0 = (mx0 * cosR - seg.y0 * sinR) * tumbleScale;
         const y0 = mx0 * sinR + seg.y0 * cosR;
-        const x1 = mx1 * cosR - my1 * sinR;
+        const x1 = (mx1 * cosR - my1 * sinR) * tumbleScale;
         const y1 = mx1 * sinR + my1 * cosR;
         ctx.moveTo(centerX + x0 * scale, centerY + y0 * scale);
         ctx.lineTo(centerX + x1 * scale, centerY + y1 * scale);
@@ -139,9 +150,20 @@ export const crystalGenerator: GeneratorDef<CrystalParams> = {
     { kind: 'slider', key: 'jitter', label: 'Jitter', min: 0, max: 1, step: 0.01, decimals: 2 },
     { kind: 'int', key: 'seed', label: 'Structure Seed', min: 1, max: 99999 },
     { kind: 'slider', key: 'growth', label: 'Growth', min: 0, max: 1, step: 0.01, decimals: 2 },
+    { kind: 'slider', key: 'rotation', label: 'Rotation', min: 0, max: Math.PI * 2, step: 0.01, decimals: 2 },
+    { kind: 'slider', key: 'spinRate', label: 'Spin Rate (rev/s)', min: -0.25, max: 0.25, step: 0.005, decimals: 3 },
+    { kind: 'slider', key: 'tumbleRate', label: 'Tumble Rate (flips/s)', min: 0, max: 0.5, step: 0.005, decimals: 3 },
+    { kind: 'slider', key: 'offsetX', label: 'Offset X', min: -1, max: 1, step: 0.01, decimals: 2 },
+    { kind: 'slider', key: 'offsetY', label: 'Offset Y', min: -1, max: 1, step: 0.01, decimals: 2 },
+    { kind: 'slider', key: 'colorCycle', label: 'Color Cycle (hue/s)', min: 0, max: 0.5, step: 0.01, decimals: 2 },
     { kind: 'color', key: 'lineColor', label: 'Color' },
     { kind: 'slider', key: 'lineWidth', label: 'Line Width', min: 0.1, max: 4, step: 0.1, decimals: 1 },
     { kind: 'slider', key: 'opacity', label: 'Opacity', min: 0.05, max: 1, step: 0.01, decimals: 2 },
+  ],
+  rates: [
+    { rateKey: 'spinRate', targetKey: 'rotation', kind: 'add' },
+    { rateKey: 'tumbleRate', targetKey: 'tumble', kind: 'add' },
+    { rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' },
   ],
   supportsDrawOn: true,
   randomize: (p) => ({ ...p, seed: Math.floor(Math.random() * 99999) + 1 }),

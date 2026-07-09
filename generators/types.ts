@@ -8,6 +8,18 @@ export type ControlSpec =
   | { kind: 'color'; key: string; label: string }
   | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[] };
 
+// Maps a rate param (cycles per second, keyframable) to the param that
+// receives its time-integrated phase. 'add' offsets a numeric param
+// (scale = radians per cycle, default 2π); 'hue' rotates a hex color's hue
+// (360° per cycle). Integration keeps motion continuous even when the rate
+// itself is keyframed (e.g. waves speeding up into a drop).
+export interface RateSpec {
+  rateKey: string;
+  targetKey: string;
+  kind: 'add' | 'hue';
+  scale?: number;
+}
+
 export interface GeneratorDef<P = any> {
   id: GeneratorId;
   label: string;
@@ -24,6 +36,7 @@ export interface GeneratorDef<P = any> {
   lerp: (a: P, b: P, u: number) => P;
   drift: (params: P, time: number, seed: number, amount: number) => P;
   controls: ControlSpec[] | 'custom';
+  rates?: RateSpec[];
   supportsDrawOn?: boolean;
   // Optional extras used by the settings panel.
   randomize?: (params: P) => P;

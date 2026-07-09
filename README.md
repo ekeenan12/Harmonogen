@@ -20,6 +20,16 @@ still export, and mp4 animation export:
 New generators are one module each in `generators/` implementing render, lerp,
 drift, presets, and a control schema.
 
+### Motion rates
+
+Each generator exposes *rate* parameters — Spin Rate, Tumble Rate, Flow Speed,
+Twist Rate, Phase Rate, Color Cycle — that the engine integrates over the clip
+into continuous phase. Because the integral is exact per keyframe segment,
+keyframing a rate produces smooth acceleration with no jumps: waves can flow
+steadily and then ramp up, a crystal can grow while tumbling, colors can cycle
+hue at a fixed rate. Rates are ordinary params, so they work with keyframes,
+drift, presets, and project files like everything else.
+
 ### Chaos-safe attractor morphs
 
 A straight line between two attractor coefficient sets often passes through
