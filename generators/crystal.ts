@@ -165,6 +165,29 @@ export const crystalGenerator: GeneratorDef<CrystalParams> = {
     { rateKey: 'tumbleRate', targetKey: 'tumble', kind: 'add' },
     { rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' },
   ],
+  dream: {
+    colorKey: 'lineColor',
+    hint: 'E.g., an icy snowflake growing while tumbling...',
+    base: {
+      ranges: {
+        symmetry: [4, 9], depth: [5, 9], branchAngle: [0.3, 1.1],
+        lengthRatio: [0.55, 0.78], jitter: [0, 0.3], seed: [1, 9999],
+        lineWidth: [0.5, 1.4], opacity: [0.5, 0.9],
+      },
+    },
+    keywords: {
+      delicate: { ranges: { depth: [8, 10], lineWidth: [0.4, 0.8] } },
+      spiky: { ranges: { branchAngle: [0.9, 1.4] } },
+      thorny: { ranges: { branchAngle: [0.9, 1.4] } },
+      snowflake: { set: { symmetry: 6 }, ranges: { jitter: [0, 0.1] } },
+      star: { ranges: { symmetry: [10, 14], depth: [4, 6] } },
+      starburst: { ranges: { symmetry: [10, 14], depth: [4, 6] } },
+      fern: { set: { symmetry: 3 }, ranges: { branchAngle: [0.35, 0.5], depth: [8, 10] } },
+    },
+    ints: ['symmetry', 'depth', 'seed'],
+    densityKeys: ['depth', 'symmetry'],
+    growKeys: ['growth'],
+  },
   supportsDrawOn: true,
   randomize: (p) => ({ ...p, seed: Math.floor(Math.random() * 99999) + 1 }),
   stat: (p) => {

@@ -49,11 +49,37 @@ Jong) always crossfade.
 2. Run the app:
    `npm run dev`
 
-## Offline prompt generator
+## AI Dreamer (offline prompt → animation)
 
-The "AI Dreamer" panel hashes your prompt into a seed and uses a local mapping of keywords
-(like "calm", "chaotic", "organic", "stormy", and "symmetric") to bias harmonograph and
-attractor parameters. This keeps generation fast, repeatable, and fully offline.
+The "AI Dreamer" panel turns a text prompt into a complete animation —
+keyframes, motion rates, and drift — for any generator, with no network or
+API keys. The prompt is hashed into a seed, recognized words steer the
+result, and a seeded RNG picks concrete values, so the same prompt always
+dreams the same clip. Vocabulary (`services/dreamer.ts`):
+
+- **Moods**: `calm`, `serene`, `chaotic`, `stormy`, `organic`, `hypnotic`,
+  `driving`, `pulsing`, `minimal`, `dense`, `intricate`, `dark`, `neon`,
+  `electric` — set palettes, motion-rate scaling, density, and drift energy.
+  Palette words: `icy`, `fire`, `golden`, `ocean`, `warm`, `aqua`.
+- **Motion**: `spinning`, `rotating`, `twisting`, `tumbling`, `flowing`,
+  `streaming`, `prismatic`, `rainbow`, `shifting` — sample the matching rate
+  params; `still`/`static`/`frozen` zeroes all motion and drift.
+- **Temporal**: `growing`, `blooming`, `emerging`, `fading`, `dissolving`,
+  `accelerating`, `collapsing` — produce a two-keyframe ramp across the clip.
+- **Subjects** switch generators: `snowflake`/`frost` → Crystal,
+  `ocean`/`ripple`/`swell` → Waves, `spiral`/`dna`/`tornado` → Helix,
+  `storm`/`particles`/`nebula` → Attractor, `pendulum`/`orbit` → Harmonograph,
+  `knot`/`rose` → Lissajous.
+- **Structure** (per generator): `delicate`, `spiky`, `fern`, `starburst`
+  (Crystal); `parabolic`, `strings`, `swell`, `choppy`, `cathedral` (Waves);
+  `dna`, `vortex`, `coiled`, `ribbon` (Helix); `knotted`, `rosette`,
+  `precessing`, `weave` (Lissajous); `symmetric` (Harmonograph mirroring).
+
+Example: *"a spinning icy snowflake slowly growing"* switches to Crystal,
+builds a 6-fold flake in an ice palette, ramps growth 0→1 across the clip,
+and sets a gentle spin — landing on the Animate tab ready to export.
+Dreamed attractors resample coefficients until the orbit is verifiably
+chaotic, so a prompt never produces a collapsed point cloud.
 
 ## Animation & mp4 export
 

@@ -1,6 +1,7 @@
 import { HarmonographParams, Oscillator } from '../types';
 import { clamp, lerp, lerpHexColor, makeWander } from '../utils/animation';
 import { drawBackground } from '../utils/renderCanvas';
+import { generateId } from '../utils/id';
 import { GeneratorDef } from './types';
 
 export const DEFAULT_PARAMS: HarmonographParams = {
@@ -201,6 +202,52 @@ export const harmonographGenerator: GeneratorDef<HarmonographParams> = {
   drift: driftHarmonograph,
   controls: 'custom', // dynamic oscillator lists need the bespoke panel
   rates: [{ rateKey: 'colorCycle', targetKey: 'lineColor', kind: 'hue' }],
+  dream: {
+    colorKey: 'lineColor',
+    hint: 'E.g., a chaotic dying star with high rotation...',
+    base: {},
+    keywords: {},
+    growKeys: ['duration'], // "growing" ramps the trace length across the clip
+    // Bespoke: oscillator lists can't be sampled declaratively. Mood energy
+    // sets the frequency/damping/turntable envelope; density sets oscillator
+    // count; "symmetric" mirrors X into Y with quarter-turn phases.
+    build: (ctx) => {
+      const freqMin = 0.6 + 2.5 * ctx.energy;
+      const freqMax = 1.5 + 7 * ctx.energy;
+      const dampMax = 0.01 + 0.08 * ctx.energy;
+      const turntableMax = 0.02 + 0.5 * ctx.energy;
+      const count = ctx.densityBias > 0.4 ? 3 : ctx.densityBias < -0.4 ? 1 : 2;
+
+      const makeOsc = (): Oscillator => ({
+        id: generateId(),
+        amplitude: 0.4 + 0.9 * ctx.rng(),
+        frequency: lerp(freqMin, freqMax, ctx.rng()),
+        phase: ctx.rng() * Math.PI * (ctx.symmetric ? 0.5 : 2),
+        damping: lerp(0.002, dampMax, ctx.rng()),
+      });
+
+      const xOscillators = Array.from({ length: count }, makeOsc);
+      const yOscillators = ctx.symmetric
+        ? xOscillators.map((osc) => ({
+            ...osc,
+            id: generateId(),
+            phase: (osc.phase + Math.PI / 2) % (Math.PI * 2),
+          }))
+        : Array.from({ length: count }, makeOsc);
+
+      const palette = ctx.palette ?? ['#06b6d4', '#22d3ee', '#818cf8', '#f472b6'];
+      return {
+        ...DEFAULT_PARAMS,
+        xOscillators,
+        yOscillators,
+        turntableOmega: (ctx.rng() * 2 - 1) * turntableMax,
+        turntableDamping: ctx.rng() * 0.01,
+        lineColor: palette[Math.floor(ctx.rng() * palette.length)],
+        lineWidth: Math.max(0.1, 0.8 * ctx.lineScale),
+        opacity: Math.min(1, 0.8 * ctx.opacityScale),
+      };
+    },
+  },
   supportsDrawOn: true,
   stat: (p) => `${(p.duration * p.sampleRate).toLocaleString()} pts`,
 };

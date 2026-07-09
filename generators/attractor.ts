@@ -366,6 +366,41 @@ export const attractorGenerator: GeneratorDef<AttractorParams> = {
     { rateKey: 'spinRate', targetKey: 'rotation', kind: 'add' },
     { rateKey: 'colorCycle', targetKey: 'color', kind: 'hue' },
   ],
+  dream: {
+    colorKey: 'color',
+    hint: 'E.g., a delicate golden storm of particles...',
+    base: {},
+    keywords: {},
+    ints: ['iterations'],
+    growKeys: ['iterations'],
+    // Bespoke: sample coefficients until the orbit is actually chaotic, so a
+    // dreamed attractor never lands on a collapsed/periodic configuration.
+    build: (ctx) => {
+      const model: AttractorType = ctx.rng() < 0.7 ? 'clifford' : 'dejong';
+      let coeffs: Coeffs = [1.5, -1.8, 1.6, 0.9];
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        const candidate: Coeffs = [
+          -2.5 + ctx.rng() * 5, -2.5 + ctx.rng() * 5,
+          -2.5 + ctx.rng() * 5, -2.5 + ctx.rng() * 5,
+        ];
+        if (orbitDensity(model, candidate) >= DENSITY_THRESHOLD * 1.5) {
+          coeffs = candidate;
+          break;
+        }
+      }
+      const palette = ctx.palette ?? ['#f472b6', '#a78bfa', '#60a5fa', '#fb923c'];
+      const densityU = clamp(ctx.rng() + ctx.densityBias * 0.35, 0, 1);
+      return {
+        ...DEFAULT_ATTRACTOR,
+        model,
+        a: coeffs[0], b: coeffs[1], c: coeffs[2], d: coeffs[3],
+        iterations: Math.round(lerp(80000, 200000, densityU)),
+        color: palette[Math.floor(ctx.rng() * palette.length)],
+        opacity: clamp(0.3 * ctx.opacityScale, 0.05, 0.6),
+        zoom: 0.8 + ctx.rng() * 0.7,
+      };
+    },
+  },
   randomize: (p) => {
     const r = () => parseFloat((Math.random() * 5 - 2.5).toFixed(2));
     return { ...p, a: r(), b: r(), c: r(), d: r() };

@@ -14,7 +14,7 @@ import OscillatorControl from './components/OscillatorControl';
 import CanvasRenderer from './components/CanvasRenderer';
 import AnimationPanel from './components/AnimationPanel';
 import GeneratorControls from './components/GeneratorControls';
-import { generateConfig } from './services/localGenerator';
+import { dreamAnimation } from './services/dreamer';
 import { GENERATORS, GENERATOR_LIST, generatorFrame } from './generators';
 
 // Icons
@@ -127,15 +127,19 @@ const App: React.FC = () => {
     }));
   };
 
-  // AI Generation (harmonograph + attractor only for now)
-  const aiSupported = generatorId === 'harmonograph' || generatorId === 'attractor';
-  const handleAiGenerate = async () => {
-    if (!aiPrompt.trim() || !aiSupported) return;
+  // AI Dreamer: deterministic offline prompt → animation. May switch
+  // generator when the prompt names a clear subject (snowflake → Crystal).
+  const handleAiGenerate = () => {
+    if (!aiPrompt.trim()) return;
     setIsAiLoading(true);
     try {
-      const mode = generatorId === 'harmonograph' ? 'harmonograph' : 'fractal';
-      const newConfig = await generateConfig(aiPrompt, mode);
-      setActiveParams(newConfig);
+      const result = dreamAnimation(aiPrompt, generatorId, animSettings.duration);
+      setAllParams((prev) => ({ ...prev, [result.generator]: result.editorParams }));
+      setAllKeyframes((prev) => ({ ...prev, [result.generator]: result.keyframes }));
+      setAnimSettings((prev) => ({ ...prev, drift: result.drift, driftSeed: result.driftSeed }));
+      if (result.generator !== generatorId) setGeneratorId(result.generator);
+      setAnimTime(0);
+      setActiveTab('animate');
     } catch (e) {
       alert("Failed to generate configuration. Please try again.");
     } finally {
@@ -271,40 +275,34 @@ const App: React.FC = () => {
 
             {activeTab === 'ai' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
-                {aiSupported ? (
-                  <div className="bg-purple-900/10 border border-purple-500/30 p-4 rounded-xl">
-                    <h3 className="text-purple-300 font-semibold mb-2 text-sm">
-                      {generatorId === 'harmonograph' ? 'Describe a motion...' : 'Describe a chaos field...'}
-                    </h3>
-                    <textarea
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder={generatorId === 'harmonograph'
-                        ? "E.g., A chaotic dying star with high rotation..."
-                        : "E.g., A delicate golden storm of particles..."}
-                      className="w-full bg-slate-950/50 border border-purple-500/30 rounded-lg p-3 text-sm focus:border-purple-400 outline-none h-32 resize-none placeholder-purple-300/30"
-                    />
-                    <button
-                      onClick={handleAiGenerate}
-                      disabled={isAiLoading || !aiPrompt}
-                      className="mt-3 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
-                    >
-                      {isAiLoading ? (
-                        <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      ) : (
-                        <SparklesIcon />
-                      )}
-                      Generate {generatorId === 'harmonograph' ? 'Physics' : 'Chaos'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-purple-900/10 border border-purple-500/30 p-4 rounded-xl">
-                    <p className="text-xs text-purple-300/70">
-                      The prompt-driven dreamer currently supports the Harmonograph and Attractor
-                      generators. Presets for {def.label} are below.
-                    </p>
-                  </div>
-                )}
+                <div className="bg-purple-900/10 border border-purple-500/30 p-4 rounded-xl">
+                  <h3 className="text-purple-300 font-semibold mb-2 text-sm">
+                    Describe a scene, mood, or motion...
+                  </h3>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder={def.dream?.hint ?? 'E.g., a calm hypnotic pattern slowly spinning...'}
+                    className="w-full bg-slate-950/50 border border-purple-500/30 rounded-lg p-3 text-sm focus:border-purple-400 outline-none h-32 resize-none placeholder-purple-300/30"
+                  />
+                  <button
+                    onClick={handleAiGenerate}
+                    disabled={isAiLoading || !aiPrompt}
+                    className="mt-3 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
+                  >
+                    {isAiLoading ? (
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    ) : (
+                      <SparklesIcon />
+                    )}
+                    Dream Animation
+                  </button>
+                  <p className="text-[10px] text-purple-300/40 mt-2">
+                    Deterministic and offline: the prompt is hashed into a seed, recognized words
+                    (moods, motion, subjects) steer the result, and the same prompt always dreams
+                    the same clip. Naming a subject like "snowflake" or "ocean" switches generators.
+                  </p>
+                </div>
 
                 <div className="border-t border-slate-800 pt-4">
                   <h4 className="text-xs font-semibold text-slate-500 uppercase mb-3">Presets</h4>
