@@ -38,6 +38,51 @@ Roughly ordered by how often they came up as "the next thing" in discussion:
    playback sync) — useful for eyeballing whether a clip's motion pacing
    feels right against the music before exporting.
 
+## Generator ideas not yet built
+
+Proposed during the generator-expansion design round; the user chose
+Lissajous / Crystal / Waves / Helix instead, but these remain good
+candidates. Each would be one new module in `generators/` implementing the
+existing `GeneratorDef` interface (render, lerp, drift, presets, control
+schema, motion rates, dream spec) — the registry means nothing else needs
+touching.
+
+- **Flow fields** — seeded noise-driven particle trails: organic, painterly
+  streams, a very different texture from the geometric curves. Great for
+  ambient sections. Deterministic via seeded noise; particle count is the
+  natural density param, field-evolution speed the natural motion rate.
+- **Julia set zooms** — classic fractal dives. Deterministic zoom/rotation
+  animations through Julia/Mandelbrot parameter space; zoom rate and
+  c-parameter orbits fit the motion-rate system naturally. Heavier per
+  frame but iconic.
+- **Fractal flames (IFS)** — iterated function systems with log-density
+  coloring: rich, smoky imagery, the most striking stills of anything
+  proposed. Related to the existing Attractor but needs a heavier render
+  pipeline (histogram accumulation + tone mapping) rather than direct
+  point stippling.
+- **Spirograph / epitrochoids** — the rolling-circle roulette family.
+  Lissajous with radial modulation covers some of this territory, but true
+  epicycloids/hypotrochoids are a distinct look; gear-ratio params morph
+  beautifully.
+- **Crystal `lean` axis** — small one: a second 3D foreshortening axis for
+  the crystal (it has spin + coin-flip tumble; a perpendicular lean would
+  complete the tumbling-in-3D illusion).
+
+## AI Dreamer extension ideas
+
+- **LLM-backed Dreamer mode (optional)** — the current Dreamer is keyword
+  mapping. For free-form prompts beyond the vocabulary ("the feeling of a
+  train leaving a station in the rain"), an optional mode could call an
+  LLM (e.g. Claude API) to emit params/keyframes JSON. Trade-offs discussed:
+  needs an API key and network, costs money, and responses must be cached
+  so regeneration stays deterministic. The offline keyword engine should
+  remain the default; this would be a supplement, not a replacement.
+- **Vocabulary growth** — the keyword tables (`services/dreamer.ts` and
+  each generator's `dream.keywords`) are designed to grow cheaply; add
+  words as the user discovers which ones they reach for. The README's
+  Dreamer reference must be updated in lockstep — it's transcribed from
+  those tables.
+
 ## Useful context
 
 - Verification has been done via headless Chromium (Playwright) driving the
